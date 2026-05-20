@@ -7,7 +7,7 @@ All notable changes to **UnitySkills** will be documented in this file.
 ### ⚠ BREAKING CHANGES
 
 - **默认模式从"AI 路由策略"升级为服务端门禁** — 原 Semi-Auto / Full-Auto 仅是 AI 路由建议，REST API 不拦截；v1.9.0 起 `SkillsModeManager` 在 `SkillRouter.Execute` 入口做真权限检查。
-- **新安装默认 Approval（最安全档）** — AI 调用 FullAuto skill 时会返回 `MODE_RESTRICTED` + grant token，需用户授权后才能执行。
+- **新安装默认 Auto** — AI 直接执行 FullAuto skill（保留低门槛），服务端仅拦 NeverInSemi（`Delete` / `MayEnterPlayMode` / `MayTriggerReload` / `RiskLevel="high"` + 兜底名单 5-10 条）；如需 per-skill 审批，到 `Window > UnitySkills > Server` 切到 Approval。
 - **老安装升级保持 Bypass（零感知）** — 通过检测旧版 `UnitySkills_*` EditorPrefs key 识别老安装，默认切到 Bypass，行为与原 Full-Auto 完全一致，无需任何操作。
 - **移除对话触发词切换模式机制** — 不再支持 "全自动模式" / "semi-auto" 等对话触发词，必须在 `Window > UnitySkills > Server` 面板切换。
 
@@ -19,6 +19,8 @@ All notable changes to **UnitySkills** will be documented in this file.
 - **审计日志** — `Library/UnitySkillsAudit.jsonl`（per-project，不入 Git），异步 append + 1MB 滚动 + 保留 3 份；记录 `mode_restricted_hit` / `grant` / `call` / `revoke` / `deny` 五类事件，含 `tokenAgeSec` 等观察指标。
 - **UnitySkillsWindow 面板** — Server Tab 新增三档单选 + Panel Approval 开关 + 待批列表（含 token / argsSummary / 倒计时） + 已授权列表 + `[Revoke]` / `[Revoke All]` + `[View Audit Log]` 按钮。
 - **新错误码** — `MODE_RESTRICTED`（Approval 下 FullAuto skill 未授权）/ `MODE_FORBIDDEN`（NeverInSemi 在 Approval/Auto 下被拒）/ `GRANT_PENDING_APPROVAL`（Panel 渠道等待用户点 Approve）。
+- **AI Config 卡片 per-scope 卸载** — Skill Installer 卡片的 Uninstall 按钮根据安装状态动态变形：未安装 → 灰态占位；仅一处安装 → 直接卸载该 scope（按钮自带 scope 标签）；两处都装 → 单按钮带 `▾` 展开 GenericMenu，分别选择 Project / Global。点击瞬间读取最新状态，避免 stale 捕获。
+- **审计日志窗口删除能力** — `Window > UnitySkills > Audit Log` 每行末尾新增悬停才显形的 `✕` 单条删除按钮，工具栏新增 `🗑 Clear All` 红色危险按钮整体清空；删除动作本身会写 `audit_deleted` / `audit_cleared` 追踪事件到日志，保留 trust anchor 属性。底层 `SkillsAuditLog.DeleteEntry(ts, type)` 与 `ClearAll()` 用 `.tmp` + `File.Replace` 做原子重写，并发安全。
 
 ### Changed
 - **`[UnitySkill]` attribute** — 新增 `Mode` 字段（`SkillMode.SemiAuto` / `SkillMode.FullAuto`，默认 FullAuto）；121 个明确低风险 skill 显式标注为 SemiAuto。
@@ -28,7 +30,7 @@ All notable changes to **UnitySkills** will be documented in this file.
 
 ### Migration Guide
 - **老用户**：升级到 v1.9.0 后默认保持 Bypass，无需任何操作，行为与原 Full-Auto 完全一致；如需启用权限审批，到 `Window > UnitySkills > Server` 面板切到 Approval / Auto。
-- **新用户**：默认 Approval，AI 第一次调用 FullAuto skill（如 `gameobject_create`）时会询问授权；授权后永久生效（per-machine），可在面板撤销。
+- **新用户**：默认 Auto，AI 可以直接调 FullAuto skill；只有 NeverInSemi（Delete / 可能进入 PlayMode / 可能触发 Reload / `RiskLevel="high"`）会被服务端拦截。需要 per-skill 手动审批时切到 Approval。
 - **自动化 / CI 场景**：在 `Window > UnitySkills > Server` 切到 Bypass，行为与 v1.8.x 全自动一致。
 - **敏感项目**：开启 Approval + Panel Approval Required，所有 grant token 必须在 Unity 面板手动批准。
 

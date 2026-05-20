@@ -66,13 +66,15 @@ Select your AI tool and click **Install**. The installer copies the `unity-skill
 
 ```
 SKILL.md                    # Main skill definition (AI reads this)
-skills/                     # Per-module skill docs (38 functional + 14 advisory)
+skills/                     # Per-module skill docs (49 functional + 19 advisory)
 scripts/unity_skills.py     # Python client library
 scripts/agent_config.json   # Agent configuration
 references/                 # Unity development references
 ```
 
 > **Codex Note**: Antigravity and Codex share `.agents/skills/` in workspace mode — install once for either makes it available to both. Codex auto-discovers skills; no `AGENTS.md` declaration needed.
+
+> **Per-Scope Uninstall (v1.9.0+)**: Each agent card has a smart Uninstall button that adapts to install state — disabled when nothing's installed, single-button (with scope label) when only one scope is installed, or `Uninstall ▾` dropdown listing Project / Global when both are. Lets you remove just our skill from one scope without touching the other.
 
 ### Manual Installation
 
@@ -96,12 +98,57 @@ The following tools have been officially tested:
 | **Antigravity** | ✅ | Open Agent Skills standard; shares `.agents/skills/` with Codex in workspace mode |
 | **Claude Code** | ✅ | Intelligent skill intent recognition |
 | **Codex** | ✅ | `$skill` explicit call + implicit intent; auto-discovers `.agents/skills/` |
+| **Cursor** | ✅ | Auto-discovers `.cursor/skills/` and `.agents/skills/`; supports `/skill-name` explicit trigger; visible in Settings → Rules |
 
 > ⚠️ **Universal Compatibility**: UnitySkills follows an open skill standard. **Any AI tool that can read markdown files and make HTTP requests** can use UnitySkills — not limited to the tools listed above. Simply copy the `unity-skills~/` directory contents to your tool's skill or prompt location and ensure the tool can reach `http://localhost:8090`.
 
 ---
 
-## 4. Python Client
+## 4. Operating Modes (v1.9.0+)
+
+UnitySkills enforces permissions on the **server side** (not just as AI routing hints), aligned with Claude Code permission modes. Switch modes in `Window → UnitySkills` → **Server** tab.
+
+| Mode | Default for | Behavior |
+|------|-------------|----------|
+| **Approval** | — | AI calls FullAuto skill → server returns `MODE_RESTRICTED` + grant token → user approves → AI replays token via `POST /permission/grant` → skill runs |
+| **Auto** | New installs | AI runs FullAuto skills directly; only NeverInSemi (auto-detected: `Delete` / `MayEnterPlayMode` / `MayTriggerReload` / `RiskLevel="high"` + ~5 fallback names) is blocked |
+| **Bypass** | Upgrades from < v1.9 | Everything passes; only the high-risk `ConfirmationToken` gate stays |
+
+**Two approval channels under Approval mode**:
+- **Dialog** (default) — AI explains intent + grant token in chat; you say OK; AI replays the token
+- **Panel** — toggle `Panel Approval Required` on; AI-issued grants only take effect after you click **[Approve]** in the Server panel; premature AI grants return `GRANT_PENDING_APPROVAL`
+
+**Zero-impact upgrade**: the plugin detects legacy `UnitySkills_*` EditorPrefs keys and keeps **Bypass** for existing users — pre-v1.9 Full-Auto behavior is preserved with no action required.
+
+### Permission REST Endpoints
+
+```bash
+curl http://localhost:8090/permission/status      # currentMode / panelApprovalRequired / pending / granted
+curl -X POST http://localhost:8090/permission/grant -d '{"token":"..."}'
+curl -X POST http://localhost:8090/permission/approve -d '{"token":"..."}'    # panel-side
+curl -X POST http://localhost:8090/permission/deny    -d '{"token":"..."}'    # panel-side
+curl -X POST http://localhost:8090/permission/revoke  -d '{"skill":"..."}'    # revoke a granted skill
+curl http://localhost:8090/permission/audit?limit=100
+```
+
+`GET /health` now also returns `currentMode` / `panelApprovalRequired` / `pendingCount` / `grantedCount` — AI agents can pull full permission state with a single call.
+
+### Audit Log
+
+All grants, revokes, restricted hits, and skill calls write to `Library/UnitySkillsAudit.jsonl` (per-project, not in Git, async append, 1MB rotation, 3 historical files kept).
+
+Open `Window → UnitySkills → Audit Log` for a Console-style browser:
+
+- Filter by event type or free-text search
+- Hover a row → click the trailing **✕** to delete that single entry
+- Toolbar **🗑 Clear All** wipes the primary log + all rotated copies
+- Both deletions write `audit_deleted` / `audit_cleared` tracer events back into the log — the act of deleting is itself audited, so the log remains a trust anchor
+
+> ❌ Chat trigger words (e.g. `"full auto"` / `"semi-auto"`) are no longer recognized. Mode switches must go through the Server tab.
+
+---
+
+## 5. Python Client
 
 ### Basic Usage
 
@@ -154,7 +201,7 @@ python unity_skills.py gameobject_create name=MyCube primitiveType=Cube
 
 ---
 
-## 5. REST API
+## 6. REST API
 
 ### Direct HTTP Calls
 
@@ -195,7 +242,7 @@ All skills return a unified format:
 
 ---
 
-## 6. Key Concepts
+## 7. Key Concepts
 
 ### Domain Reload & Temporary Unavailability
 
@@ -247,7 +294,7 @@ unity_skills.wait_for_job(job["jobId"], timeout=90)
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Problem | Symptom | Solution |
 |---------|---------|----------|
@@ -257,10 +304,11 @@ unity_skills.wait_for_job(job["jobId"], timeout=90)
 | Disconnect after script creation | Server unreachable after `script_create` | Normal — wait for compilation, then retry |
 | Wrong instance | Request hits wrong project | Use `set_unity_version()` or connect by project name |
 | Workflow state mismatch | Client/server state diverged | Read `workflow_session_status`; client has built-in recovery |
+| Permission denied | Response has `errorCode: MODE_RESTRICTED` / `MODE_FORBIDDEN` / `GRANT_PENDING_APPROVAL` | Check current mode at `GET /permission/status`; in Approval mode replay the grant token; if `Panel Approval Required` is on, user must click Approve in the Server tab |
 
 ---
 
-## 8. References
+## 9. References
 
 | Resource | Description |
 |----------|-------------|

@@ -66,13 +66,15 @@ Window → UnitySkills → Skill Installer
 
 ```
 SKILL.md                    # 主 Skill 定义（AI 读取）
-skills/                     # 按模块分类的 Skill 文档（38 功能 + 14 顾问）
+skills/                     # 按模块分类的 Skill 文档（49 功能 + 19 顾问）
 scripts/unity_skills.py     # Python 客户端库
 scripts/agent_config.json   # Agent 配置
 references/                 # Unity 开发参考文档
 ```
 
 > **Codex 说明**：Antigravity 和 Codex 工作区共享 `.agents/skills/`，装一次即两边可用。Codex 自动扫描发现 skills，无需在 `AGENTS.md` 中声明。
+
+> **按 scope 卸载（v1.9.0+）**：每个 Agent 卡片的"卸载"按钮按当前安装状态智能形变 —— 未安装为灰态；仅一处装则按钮自带 scope 标签直接卸载该 scope；两处都装则显示 `Uninstall ▾` 下拉，分别选择 Project / Global。允许只移除一个 scope 的 skill，不动另一个。
 
 ### 手动安装
 
@@ -96,12 +98,57 @@ references/                 # Unity 开发参考文档
 | **Antigravity** | ✅ | 开放 Agent Skills 标准；工作区与 Codex 共享 `.agents/skills/` |
 | **Claude Code** | ✅ | 智能 Skill 意图识别 |
 | **Codex** | ✅ | `$skill` 显式调用 + 隐式意图识别；自动扫描 `.agents/skills/` |
+| **Cursor** | ✅ | 自动扫描 `.cursor/skills/` 和 `.agents/skills/`；支持 `/skill-name` 显式触发；可在 设置 → Rules 查看已加载技能 |
 
 > ⚠️ **通用兼容性**：UnitySkills 遵循开放的 Skill 标准。**任何能读取 markdown 文件并发送 HTTP 请求的 AI 工具**都可以使用 UnitySkills — 不限于上述列表。只需将 `unity-skills~/` 目录内容复制到你的工具的 skill 或 prompt 位置，确保工具能访问 `http://localhost:8090` 即可。
 
 ---
 
-## 4. Python 客户端
+## 4. 操作模式 (v1.9.0+)
+
+UnitySkills 在**服务端**真正做权限拦截（不再只是 AI 路由建议），对齐 Claude Code permission modes。模式切换统一在 `Window → UnitySkills` → **Server** 标签页完成。
+
+| 模式 | 默认场景 | 行为 |
+|------|----------|------|
+| **Approval（审批）** | — | AI 调 FullAuto skill → 服务端返回 `MODE_RESTRICTED` + grant token → 用户批准 → AI 调 `POST /permission/grant` 重放 token → skill 执行 |
+| **Auto（自动）** | 新安装 | AI 直接执行 FullAuto skill；服务端仅拦自动判定的 NeverInSemi（`Delete` / `MayEnterPlayMode` / `MayTriggerReload` / `RiskLevel="high"` + 兜底名单约 5 条） |
+| **Bypass（全自动）** | < v1.9 升级用户 | 全部放行，仅保留高危 `ConfirmationToken` 二次确认 |
+
+**Approval 模式双轨审批**：
+- **Dialog 渠道**（默认）—— AI 对话说明意图 + grant token，用户文字同意后 AI 直接重放 token
+- **Panel 渠道**（面板开启 `Panel Approval Required`）—— grant token 必须在 Server 面板点 `[Approve]` 才生效，AI 提前调 grant 返回 `GRANT_PENDING_APPROVAL`
+
+**老用户零感知升级**：插件检测旧版 `UnitySkills_*` EditorPrefs key 自动识别老安装，默认保持 **Bypass**，pre-v1.9 Full-Auto 行为完全保留，无需操作。
+
+### 权限相关 REST 端点
+
+```bash
+curl http://localhost:8090/permission/status      # currentMode / panelApprovalRequired / pending / granted
+curl -X POST http://localhost:8090/permission/grant -d '{"token":"..."}'
+curl -X POST http://localhost:8090/permission/approve -d '{"token":"..."}'    # 面板侧批准
+curl -X POST http://localhost:8090/permission/deny    -d '{"token":"..."}'    # 面板侧拒绝
+curl -X POST http://localhost:8090/permission/revoke  -d '{"skill":"..."}'    # 撤销已授权 skill
+curl http://localhost:8090/permission/audit?limit=100
+```
+
+`GET /health` 现在还返回 `currentMode` / `panelApprovalRequired` / `pendingCount` / `grantedCount` —— AI 启动时一次拉取即可获取完整权限状态。
+
+### 审计日志
+
+所有 grant / revoke / 被拒命中 / skill 调用都会写入 `Library/UnitySkillsAudit.jsonl`（per-project，不入 Git，异步追加，1MB 滚动，保留 3 份历史）。
+
+打开 `Window → UnitySkills → Audit Log` 即可获得 Console 风格的浏览器：
+
+- 按事件类型或自由文本过滤
+- 鼠标悬停某行 → 点末尾 **✕** 删除该单条
+- 工具栏 **🗑 Clear All** 清空主日志 + 全部历史滚动文件
+- 删除动作本身会写 `audit_deleted` / `audit_cleared` 追踪事件回日志 —— 删除行为本身被审计，日志依然是 trust anchor
+
+> ❌ 不再识别对话触发词（如 `"全自动模式"` / `"semi-auto"`），模式切换必须走 Server 标签页。
+
+---
+
+## 5. Python 客户端
 
 ### 基本用法
 
@@ -154,7 +201,7 @@ python unity_skills.py gameobject_create name=MyCube primitiveType=Cube
 
 ---
 
-## 5. REST API
+## 6. REST API
 
 ### 直接 HTTP 调用
 
@@ -195,7 +242,7 @@ curl -X POST http://localhost:8090/skill/gameobject_create \
 
 ---
 
-## 6. 核心概念
+## 7. 核心概念
 
 ### Domain Reload 与短暂不可达
 
@@ -239,7 +286,7 @@ unity_skills.list_instances()               # 枚举所有实例
 
 ---
 
-## 7. 常见排障
+## 8. 常见排障
 
 | 问题 | 现象 | 建议 |
 |------|------|------|
@@ -249,10 +296,11 @@ unity_skills.list_instances()               # 枚举所有实例
 | 脚本创建后断连 | `script_create` 后服务不可达 | 正常现象 — 等待编译完成后重试 |
 | 连接到错误实例 | 请求打到了错误项目 | 使用 `set_unity_version()` 或按项目名连接 |
 | 工作流状态异常 | 客户端/服务端状态不一致 | 读取 `workflow_session_status`；客户端已内置恢复逻辑 |
+| 权限被拒 | 响应含 `errorCode: MODE_RESTRICTED` / `MODE_FORBIDDEN` / `GRANT_PENDING_APPROVAL` | 用 `GET /permission/status` 查看当前模式；Approval 模式下重放 grant token；若开了 `Panel Approval Required`，需用户在 Server 标签页点 Approve |
 
 ---
 
-## 8. 参考索引
+## 9. 参考索引
 
 | 资源 | 说明 |
 |------|------|

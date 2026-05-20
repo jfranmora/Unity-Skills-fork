@@ -46,19 +46,21 @@ UnitySkills 引入真正的服务端权限系统，对齐 Claude Code permission
 
 | 模式 | 默认 | 行为 | 适用场景 |
 |:-----|:----:|:-----|:---------|
-| **Approval（审批）** | 新安装 | AI 想做事 → 服务端返回 `MODE_RESTRICTED` + grant token → 用户审批 → AI 重放 token 后执行 | 重控制、敏感项目 |
-| **Auto（自动）** | — | AI 直接执行 FullAuto skill；服务端仅拦自动判定的高危操作 | 日常开发 |
+| **Approval（审批）** | — | AI 想做事 → 服务端返回 `MODE_RESTRICTED` + grant token → 用户审批 → AI 重放 token 后执行 | 重控制、敏感项目 |
+| **Auto（自动）** | 新安装 | AI 直接执行 FullAuto skill；服务端仅拦自动判定的高危操作（NeverInSemi） | 日常开发 |
 | **Bypass（全自动）** | 老安装升级保持 | 全部放行，仅保留高危 `ConfirmationToken` 二次确认 | 自动化任务、CI、快速迭代 |
 
 **Approval 模式双轨审批**：
 - **Dialog 渠道**（默认）—— AI 对话说明意图 + grant token，用户文字同意后 AI 调 `POST /permission/grant` 重放
 - **Panel 渠道**（面板可选开启）—— grant token 必须在 Unity 面板点 **[Approve]** 才生效；AI 未经面板批准直接 grant 会返回 `GRANT_PENDING_APPROVAL`
 
-**老用户升级零感知**：插件检测旧版 `UnitySkills_*` EditorPrefs key 自动识别老安装，默认保持 **Bypass**，行为与原 Full-Auto 完全一致，无需任何操作。新安装默认 **Approval**（最安全）。
+**老用户升级零感知**：插件检测旧版 `UnitySkills_*` EditorPrefs key 自动识别老安装，默认保持 **Bypass**，行为与原 Full-Auto 完全一致，无需任何操作。新安装默认 **Auto** —— FullAuto skill 直接执行，仅 NeverInSemi（Delete / MayEnterPlayMode / MayTriggerReload / 高危）操作会被服务端拦截。若需要按 skill 手动审批，进 Server 标签页切到 **Approval**。
 
 > ❌ 不再识别对话触发词（如 `"全自动模式"` / `"semi-auto"`），请在 **Window > UnitySkills > Server** 面板切换。
 >
-> 📜 审计日志：`Library/UnitySkillsAudit.jsonl`（per-project，jsonl，1MB 滚动，保留 3 份），记录每次 grant / revoke / 被拒命中 / 调用。
+> 📜 审计日志：`Library/UnitySkillsAudit.jsonl`（per-project，jsonl，1MB 滚动，保留 3 份），记录每次 grant / revoke / 被拒命中 / 调用。打开 **Window > UnitySkills > Audit Log** 可浏览、过滤、单条删除（✕）或整体清空（🗑 Clear All）—— 删除动作本身会写 `audit_deleted` / `audit_cleared` 追踪事件，日志依然可审计。
+>
+> 🗑 Skill Installer 卡片的"卸载"按钮按 scope 智能形变：未装为灰态；仅一处装则按钮自带 scope 标签直接卸载；两处都装则显示 `Uninstall ▾` 下拉，分别选择 Project / Global。
 >
 > 19 个 advisory 设计模块（架构、性能、设计模式、可测试性、包级源码规则等）在所有模式下均可用，按需自动加载。
 

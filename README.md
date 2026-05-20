@@ -46,19 +46,21 @@ UnitySkills ships with a true server-side permission system aligned with Claude 
 
 | Mode | Default | Behavior | Use Case |
 |:-----|:-------:|:---------|:---------|
-| **Approval** | New installs | AI must request → user approves → execute (returns `MODE_RESTRICTED` + grant token) | Manual control, sensitive projects |
-| **Auto** | — | AI runs FullAuto skills directly; server only blocks auto-detected high-risk ops | Day-to-day development |
+| **Approval** | — | AI must request → user approves → execute (returns `MODE_RESTRICTED` + grant token) | Manual control, sensitive projects |
+| **Auto** | New installs | AI runs FullAuto skills directly; server only blocks auto-detected high-risk ops (NeverInSemi) | Day-to-day development |
 | **Bypass** | Existing installs (upgrade) | All skills run unrestricted; only `ConfirmationToken` gate remains for high-risk ops | Automation, CI, fast iteration |
 
 **Two approval channels under Approval mode**:
 - **Dialog** (default) — AI explains intent + grant token, user agrees in chat, AI replays the token via `POST /permission/grant`
 - **Panel** (opt-in) — grant token only takes effect after user clicks **[Approve]** in the Unity panel; AI-issued grants without panel approval return `GRANT_PENDING_APPROVAL`
 
-**Zero-impact upgrade for existing users**: the plugin detects legacy `UnitySkills_*` EditorPrefs keys and keeps **Bypass** as the default, preserving the previous Full-Auto behavior with no action required. New installations default to **Approval** (safest).
+**Zero-impact upgrade for existing users**: the plugin detects legacy `UnitySkills_*` EditorPrefs keys and keeps **Bypass** as the default, preserving the previous Full-Auto behavior with no action required. New installations default to **Auto** — FullAuto skills run directly, only NeverInSemi (Delete / MayEnterPlayMode / MayTriggerReload / high-risk) operations are blocked. Switch to **Approval** in the Server tab if you need per-skill manual gating.
 
 > ❌ Chat trigger words (e.g. `"full auto"` / `"semi-auto"`) are no longer recognized. Switch modes in **Window > UnitySkills > Server**.
 >
-> 📜 Audit log: `Library/UnitySkillsAudit.jsonl` (per-project, jsonl, auto-rolls at 1MB, keeps 3 files) records every grant / revoke / restricted hit / call.
+> 📜 Audit log: `Library/UnitySkillsAudit.jsonl` (per-project, jsonl, auto-rolls at 1MB, keeps 3 files) records every grant / revoke / restricted hit / call. Open **Window > UnitySkills > Audit Log** to browse, filter, delete individual entries (✕), or wipe everything (🗑 Clear All) — deletions themselves are appended as `audit_deleted` / `audit_cleared` events so the log stays auditable.
+>
+> 🗑 The Skill Installer card shows a **per-scope uninstall** button that auto-adapts: disabled when nothing's installed, a single button labeled with its scope when only one is installed, and a dropdown (`Uninstall ▾`) listing Project / Global when both are installed.
 >
 > 19 advisory design modules (architecture, performance, design patterns, testability, package-specific source rules, etc.) are available in all modes and loaded on demand.
 
