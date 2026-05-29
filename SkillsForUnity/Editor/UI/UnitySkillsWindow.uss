@@ -132,9 +132,11 @@
     border-bottom-width: 1px;
     border-bottom-color: var(--color-border-hard);
     padding: 0 8px;
+    min-width: 0;
 }
 
 .status-dot {
+    flex-shrink: 0;
     width: 10px;
     height: 10px;
     border-radius: 5px;
@@ -158,6 +160,7 @@
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
+    max-width: 9999px;
     height: 22px;
     background-color: var(--color-input-bg);
     border-width: 1px;
@@ -169,6 +172,8 @@
 
 .url-pill__text {
     flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
     color: var(--color-text-secondary);
     font-size: 11px;
     -unity-text-align: middle-left;
@@ -178,7 +183,10 @@
     white-space: nowrap;
 }
 
-.url-pill__text > .unity-text-field__input {
+.url-pill__text > .unity-text-field__input,
+.url-pill__text > .unity-base-text-field__input,
+.url-pill__text > .unity-base-field__input {
+    min-width: 0;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     color: var(--color-text-secondary);
@@ -188,6 +196,8 @@
 }
 
 .url-pill__copy {
+    flex-shrink: 0;
+    min-width: 58px;
     height: 16px;
     margin: 0 0 0 4px;
     padding: 0 6px;
@@ -205,6 +215,7 @@
 
 /* Server Toggle Switch — slider style (uiverse adaptation) */
 .server-switch {
+    flex-shrink: 0;
     width: 32px;
     height: 18px;
     margin: 0 6px 0 4px;
@@ -245,7 +256,7 @@
 
 .server-status-text {
     flex-shrink: 0;
-    min-width: 56px;
+    min-width: 46px;
     margin-right: 4px;
     font-size: 10px;
     color: var(--color-text-secondary);
@@ -256,8 +267,109 @@
 .server-status-text.on  { color: var(--color-success); }
 .server-status-text.off { color: var(--color-muted); }
 
+#perm-mode-badge {
+    flex-shrink: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#perm-mode-badge.perm-mode-badge--fallback {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    min-width: 76px;
+    max-width: 76px;
+    padding: 0 6px;
+}
+
+#perm-mode-badge.perm-mode-badge--fallback .perm-mode-badge__dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 4px;
+    background-color: var(--color-muted);
+}
+
+#perm-mode-badge.perm-mode-badge--fallback .perm-mode-badge__label {
+    flex-shrink: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 10px;
+    color: var(--color-text);
+    -unity-text-align: middle-left;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#perm-mode-badge.perm-mode-badge--fallback.perm-mode-badge--approval .perm-mode-badge__dot {
+    background-color: var(--color-warning);
+}
+
+#perm-mode-badge.perm-mode-badge--fallback.perm-mode-badge--auto .perm-mode-badge__dot {
+    background-color: var(--color-accent);
+}
+
+#perm-mode-badge.perm-mode-badge--fallback.perm-mode-badge--bypass .perm-mode-badge__dot {
+    background-color: #18d59a;
+}
+
+.topbar--compact .url-pill {
+    flex-grow: 0;
+    flex-shrink: 0;
+    width: 70px;
+    padding-left: 3px;
+    padding-right: 3px;
+    margin: 0 4px;
+}
+
+.topbar--compact .url-pill__text {
+    display: none;
+}
+
+.topbar--compact .url-pill__copy {
+    margin-left: 0;
+}
+
+.topbar--compact .status-dot {
+    display: none;
+}
+
+.topbar--compact .server-switch {
+    margin: 0 4px 0 2px;
+}
+
+.topbar--compact .server-status-text {
+    min-width: 42px;
+    margin-right: 2px;
+}
+
+.topbar--compact #perm-mode-badge {
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+}
+
+.topbar--compact #perm-mode-badge.perm-mode-badge--native {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
+.topbar--narrow .url-pill,
+.topbar--narrow .status-dot {
+    display: none;
+}
+
+.topbar--narrow .server-switch {
+    margin-left: 0;
+}
+
 /* Icon button (gear, close, etc.) */
 .icon-btn {
+    flex-shrink: 0;
     width: 28px;
     height: 24px;
     margin: 0;

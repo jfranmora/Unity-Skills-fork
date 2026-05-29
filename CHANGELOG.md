@@ -2,6 +2,16 @@
 
 All notable changes to **UnitySkills** will be documented in this file.
 
+## [1.9.4] - 2026-05-29
+
+### Added
+- **Topbar 响应式布局** — `TopbarController` 监听 `GeometryChangedEvent`，根据宽度阈值（380px / 300px）动态切换 `topbar--compact` / `topbar--narrow` CSS 类；Compact 模式隐藏 URL 文字区域，Narrow 模式隐藏整个 URL pill 与状态点，确保窗口缩小时控件不重叠。
+- **权限徽章降级渲染（Unity 2022 兼容）** — 检测 Unity 主版本号，Unity 6（6000+）使用原生 emoji 文字徽章，旧版本构建 dot + label 的 fallback DOM 结构，并通过 `perm-mode-badge--approval/auto/bypass` CSS 类驱动彩色指示点，彻底消除旧版本 emoji 渲染异常。
+
+### Changed
+- **USS 布局修复** — `#topbar` 加 `min-width: 0`；`.status-dot` / `.server-switch` / `.url-pill__copy` / `.icon-btn` 加 `flex-shrink: 0` 防止被压缩；`.url-pill__text` 及其 Unity 内部输入子类选择器补 `min-width: 0`；`.server-status-text` `min-width` 从 56px 收窄至 46px；新增 `topbar--compact` / `topbar--narrow` 响应式规则集与 `perm-mode-badge--fallback` 样式块。
+- **版本号更新** — `SkillsLogger.Version` / `package.json` / Python helper `__version__` / `agent.md` 同步提升到 `1.9.4`。
+
 ## [1.9.3] - 2026-05-27
 
 ### Fixed
