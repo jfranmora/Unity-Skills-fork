@@ -13,6 +13,7 @@ namespace UnitySkills
     {
         private const float CompactTopbarWidth = 380f;
         private const float NarrowTopbarWidth = 300f;
+        private const long SelfHealIntervalMs = 500;
 
         private enum TopbarLayoutState
         {
@@ -66,19 +67,36 @@ namespace UnitySkills
             SkillsModeManager.OnChanged += UpdateLiveData;
             _root.RegisterCallback<DetachFromPanelEvent>(OnRootDetached);
             if (_topbarElement != null)
+            {
                 _topbarElement.RegisterCallback<GeometryChangedEvent>(OnTopbarGeometryChanged);
+                // 兜底自愈：Unity 6 双击最大化会让窗口 detach→attach 并在同帧多次 layout，
+                // GeometryChangedEvent 可能漏派发"最终尺寸"那次，使响应式卡在窄布局。
+                // 低频轮询真实 layout 宽度重算——schedule 挂在元素上，detach 自动暂停、
+                // attach 自动恢复，不依赖事件派发；ApplyResponsiveLayout 内有状态早退，重复调用零副作用。
+                _topbarElement.schedule.Execute(SelfHealResponsiveLayout).Every(SelfHealIntervalMs);
+            }
         }
 
         private void OnRootDetached(DetachFromPanelEvent _)
         {
+            // 仅退订静态事件，防止 window 关闭后 TopbarController 无法回收 / 回调打到已销毁 UI。
+            // GeometryChangedEvent 挂在 _topbarElement 自身，元素销毁会自动清理——
+            // 这里绝不能退订它，否则 maximize 引发的 detach→attach 会让响应式永久失效。
             SkillsModeManager.OnChanged -= UpdateLiveData;
-            if (_topbarElement != null)
-                _topbarElement.UnregisterCallback<GeometryChangedEvent>(OnTopbarGeometryChanged);
         }
 
         private void OnTopbarGeometryChanged(GeometryChangedEvent evt)
         {
             ApplyResponsiveLayout(evt.newRect.width);
+        }
+
+        // 周期兜底：直接读取 topbar 当前 layout 宽度重算断点，覆盖 GeometryChangedEvent 漏派发的情况。
+        private void SelfHealResponsiveLayout()
+        {
+            if (_topbarElement == null) return;
+            float width = _topbarElement.layout.width;
+            if (width > 0f && !float.IsNaN(width))
+                ApplyResponsiveLayout(width);
         }
 
         private void ApplyResponsiveLayout(float width)
