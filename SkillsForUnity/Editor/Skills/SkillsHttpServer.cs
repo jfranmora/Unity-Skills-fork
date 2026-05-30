@@ -1226,7 +1226,9 @@ namespace UnitySkills
             if (string.Equals(path, "/skills/schema", StringComparison.OrdinalIgnoreCase) && job.HttpMethod == "GET")
             {
                 job.StatusCode = 200;
-                job.ResponseJson = SkillRouter.GetSchema();
+                job.ResponseJson = string.IsNullOrEmpty(job.QueryString)
+                    ? SkillRouter.GetSchema()
+                    : SkillRouter.GetFilteredSchema(job.QueryString);
                 return;
             }
 

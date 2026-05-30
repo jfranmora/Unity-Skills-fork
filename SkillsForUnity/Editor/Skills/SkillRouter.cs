@@ -795,11 +795,21 @@ namespace UnitySkills
         /// Returns a filtered skills manifest based on query string parameters.
         /// Supported: category, operation, tags, readOnly, q (text search).
         /// </summary>
-        public static string GetFilteredManifest(string queryString)
+        public static string GetFilteredManifest(string queryString) => BuildFilteredOutput(queryString, "manifest");
+
+        /// <summary>
+        /// Same category/operation/tags/readOnly/q filtering as GetFilteredManifest, but tags the
+        /// payload with manifestType "schema" — backs GET /skills/schema?category=... (scoped schema,
+        /// avoids pulling the full ~578KB schema when only one category is needed).
+        /// </summary>
+        public static string GetFilteredSchema(string queryString) => BuildFilteredOutput(queryString, "schema");
+
+        private static string BuildFilteredOutput(string queryString, string manifestType)
         {
             Initialize();
             var filters = ParseQueryString(queryString);
-            if (filters.Count == 0) return GetManifest();
+            if (filters.Count == 0)
+                return manifestType == "schema" ? GetSchema() : GetManifest();
 
             IEnumerable<SkillInfo> filtered = _skills.Values;
 
@@ -827,7 +837,7 @@ namespace UnitySkills
             }
 
             var results = filtered.ToList();
-            var manifest = BuildManifest(results, filtered: true, filters, manifestType: "manifest");
+            var manifest = BuildManifest(results, filtered: true, filters, manifestType);
             return JsonConvert.SerializeObject(manifest, _jsonSettings);
         }
 
