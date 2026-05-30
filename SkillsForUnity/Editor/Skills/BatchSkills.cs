@@ -404,7 +404,7 @@ namespace UnitySkills
             };
         }
 
-        [UnitySkill("job_wait", "Wait for a UnitySkills job to finish or until timeoutMs elapses.",
+        [UnitySkill("job_wait", "Wait for a UnitySkills job to finish or until timeoutMs elapses. Direct REST default timeoutMs=10000 (10s); the Python wait_for_job() wrapper defaults to 60s and passes timeoutMs explicitly — the two defaults target different callers, not a conflict.",
             Category = SkillCategory.Workflow, Operation = SkillOperation.Execute,
             Tags = new[] { "job", "wait", "async" },
             Outputs = new[] { "jobId", "status", "reportId" },
