@@ -126,14 +126,12 @@
 - MayEnterPlayMode = true
 - MayTriggerReload = true
 - RiskLevel == "high"（大小写不敏感）
-- 名字在 _explicitNeverList 兜底名单中
 ```
 
 校验：
 
-1. **覆盖统计**：自动判定为 NeverInSemi 的 skill 总数（方案估算应 ≥ 40），按模块分组列出
-2. **兜底名单存活**：解析 `Editor/Skills/SkillsModeManager.cs` 中 `_explicitNeverList`（当前为 `scene_clear` / `scene_new` / `batch_apply`），确认每个 skill 仍存在于 C# 中——若已被移除/重命名 → 🟡 中等（清单需清理）
-3. **语义矛盾检测**：若某 skill 同时被 `Mode = SkillMode.SemiAuto` 手标 + 满足自动 NeverInSemi 判定 → 🔴 严重（必须移除其 SA 标注，或调整元数据让其不再满足 NeverInSemi 规则）
+1. **覆盖统计**：自动判定为 NeverInSemi 的 skill 总数（当前约 75-79），按模块分组列出
+2. **语义矛盾检测**：若某 skill 同时被 `Mode = SkillMode.SemiAuto` 手标 + 满足自动 NeverInSemi 判定 → 🔴 严重（必须移除其 SA 标注，或调整元数据让其不再满足 NeverInSemi 规则）
 
 ### 3j. /permission/* 端点存活校验（可选 — 需服务运行）
 
