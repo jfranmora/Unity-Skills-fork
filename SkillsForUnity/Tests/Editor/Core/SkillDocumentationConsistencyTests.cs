@@ -41,7 +41,8 @@ namespace UnitySkills.Tests.Core
             "dotween-design",
             "netcode-design",
             "unitask-design",
-            "yooasset-design"
+            "yooasset-design",
+            "yaml-editing"
         };
 
         private static readonly HashSet<string> ExactSignatureOptionalModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
